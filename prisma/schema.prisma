@@ -15,6 +15,12 @@ datasource db {
 // User lives in Supabase auth.users — we only store the UUID as a foreign reference.
 // Access control is enforced by Supabase RLS, not by a Prisma FK.
 
+enum DocumentStatus {
+  processing
+  ready
+  failed
+}
+
 model Notebook {
   id        String   @id @default(uuid()) @db.Uuid
   title     String
@@ -30,12 +36,13 @@ model Notebook {
 }
 
 model Document {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String         @id @default(uuid()) @db.Uuid
   name       String
   fileUrl    String
   mimeType   String?
-  notebookId String   @db.Uuid
-  createdAt  DateTime @default(now())
+  status     DocumentStatus @default(processing)
+  notebookId String         @db.Uuid
+  createdAt  DateTime       @default(now())
 
   notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
   chunks   Chunk[]

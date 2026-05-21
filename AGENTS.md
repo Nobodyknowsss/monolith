@@ -13,6 +13,16 @@ This version (Next.js 16) has breaking changes — APIs, conventions, and file s
 - **shadcn `base-nova` preset Button** uses `@base-ui/react/button`, **not** Radix Slot. There is no `asChild` prop. To style a `<Link>` as a button, use `buttonVariants()` + `cn()` directly on the Link.
 - **shadcn `base-nova` Dialog/AlertDialog/DropdownMenu triggers** use `render={<Button />}` (base-ui pattern), not `asChild`. The trigger's children become the rendered Button's children.
 - **Prisma 7 generated model types** are named `<Model>Model` (e.g. `NotebookModel`), not bare `Notebook`. Import from `@/generated/prisma/models`. The `Notebook` symbol itself doesn't exist.
+- **`pdf-parse@2` has a new class API** (and is Next.js / Vercel friendly). Use `import { PDFParse } from "pdf-parse"`, then `new PDFParse({ data: bufferOrUint8Array })`, then `await parser.getText()` → `{ text, pages }`. **Do not** import from `pdf-parse/lib/pdf-parse.js` (that was the v1 workaround; the path no longer exists in v2). v2 ships its own types — don't install `@types/pdf-parse`.
+- **`pdf-parse` + `pdfjs-dist` must be in `serverExternalPackages`** in `next.config.ts` (top-level, not under `experimental`). Without this Turbopack bundles them and pdfjs's worker (`pdf.worker.mjs`) can't be located at runtime → `Setting up fake worker failed` on every parse.
+- **HuggingFace inference: do NOT hand-code `api-inference.huggingface.co`.** That subdomain was retired (DNS `ENOTFOUND`). Use the `@huggingface/inference` SDK (`InferenceClient`) — it handles routing through `router.huggingface.co` and works against the current "Inference Providers" system. Construct lazily at call time so missing `HUGGINGFACE_API_KEY` at boot doesn't crash the server.
+- **HF free-tier chat is unreliable** (late 2025+). The `hf-inference` provider rejects most instruct models with either `'is not a chat model'` (no `conversational` tag) or `'not supported by any provider you have enabled'` (account-level provider config). After burning hours on this, **we use HF only for embeddings** (still works) and Google Gemini for chat.
+- **Supabase + Prisma drift workaround (recurring)**: `prisma migrate dev` fails on every schema change because Supabase auto-manages its extensions independently. **Workflow for any schema change:**
+  1. Edit `prisma/schema.prisma`
+  2. `npx prisma db push` — applies the change directly to the DB
+  3. Hand-write the migration SQL in a new folder `prisma/migrations/<timestamp>_<name>/migration.sql` (don't try `migrate diff --from-migrations` — it needs a shadow DB)
+  4. `npx prisma migrate resolve --applied <timestamp>_<name>`
+  5. `npx prisma generate`
 <!-- END:nextjs-agent-rules -->
 
 # Project: NoteMind
@@ -113,6 +123,65 @@ Built **one step at a time under user guidance**. Do not batch multiple steps wi
 - Two-pane shell: left Documents (Phase 3 placeholder), right Chat (Phase 4 placeholder)
 - `app/notebooks/[id]/not-found.tsx` — friendly 404 that doesn't leak existence vs. access
 
+### ✅ Phase 3 — Document Upload & Ingestion (complete)
+
+**Schema + config**
+- `Document.status` enum: `processing` | `ready` | `failed` (default `processing`)
+- Migration: `prisma/migrations/20260521010000_document_status`
+- `next.config.ts` — `experimental.serverActions.bodySizeLimit = "10mb"`. **Vercel Hobby caps serverless body at ~4.5MB** — if deploying there, drop this back or move to signed-URL direct upload.
+- Deps: `pdf-parse`, `mammoth`, `@langchain/textsplitters`, `@types/pdf-parse`
+- `types/pdf-parse.d.ts` — module declaration for `pdf-parse/lib/pdf-parse.js` (the inner path we import to avoid the test-PDF bug)
+
+**Storage**
+- `lib/storage.ts` — `uploadFileToStorage`, `downloadFileFromStorage`, `deleteFileFromStorage`
+- Bucket: `STORAGE_BUCKET = "documents"` (private, in Supabase dashboard)
+- Path scheme: `<userId>/<notebookId>/<documentId>-<safeFilename>`
+- **RLS policies required** — see `supabase/storage_policies.sql`. Run once in the Supabase SQL Editor. Without these, every upload returns `new row violates row-level security policy`. The policies scope INSERT/SELECT/DELETE to files whose first path segment matches `auth.uid()`.
+
+**Ingestion pipeline (`lib/`)**
+- `parsing.ts` — `parseFile(buffer, mimeType)` dispatching to `pdf-parse` (inner path) / `mammoth` / native UTF-8. `SUPPORTED_MIME_TYPES`, `isSupportedMimeType()` guard.
+- `chunking.ts` — `chunkText(text)`: `RecursiveCharacterTextSplitter` 800 chars / 100 overlap, whitespace-normalized.
+- `embeddings.ts` — `embed(texts)` calls HF Inference API for `sentence-transformers/all-MiniLM-L6-v2`. Batches of 32, retries 503 cold-start with backoff, normalizes the 1D-vs-2D response quirk for single inputs.
+- `ingest.ts` — orchestrator. Marks `failed` on any error before rethrowing. **Writes chunks via `$executeRaw` because `Chunk.embedding` is `Unsupported("vector(384)")` — Prisma can't write it through the typed client.** Pattern: `${vectorLiteral}::vector` (still parameterized, safe from injection).
+
+**Server actions (`app/actions/documents.ts`)**
+- `uploadDocument(formData)` — ownership check → file validation (10MB cap, MIME guard) → create Document row (status `processing`) → upload to Storage → update with path → `ingestDocument()` synchronously → revalidate + redirect. On any error: marks `status: "failed"`, still redirects.
+- `deleteDocument(formData)` — ownership check via JOIN (`notebook.userId`) → best-effort storage delete → DB delete (cascade kills chunks).
+
+**UI (`components/document/`)**
+- `upload-dropzone.tsx` (client) — drag-drop + click, native `DataTransfer` binding to a hidden file input so the form submits the file naturally. `useFormStatus()` drives a `<DropzoneActions>` sub-component that disables Clear+Upload while pending.
+- `document-list.tsx` (server) — divided list.
+- `document-item.tsx` (server) — file icon, truncated name, chunk count (only when Ready), status pill, delete button.
+- `delete-document-dialog.tsx` (client) — AlertDialog confirm.
+- `documents-pane.tsx` (server) — assembles header + dropzone + list. Used by `app/notebooks/[id]/page.tsx`.
+- `types/document.ts` — `DocumentListItem = DocumentModel & { _count: { chunks: number } }`.
+
+**Performance ceiling to remember**
+- Each upload is synchronous: parse → chunk → batch-embed via HF → INSERT-per-chunk. Big PDFs can take 10–30s. Acceptable for MVP. If we hit Vercel function timeouts (Hobby: 10s; Pro: 60s), move ingestion to `after()` (Next.js 16) or a background job runner.
+- HF free tier rate-limits hard (~100s req/hr). Heavy use = switch to dedicated inference endpoint.
+
+### ✅ Phase 4 — RAG Chat (complete)
+
+**LLM**: `llama-3.3-70b-versatile` via Groq (`groq-sdk`). Free tier, no credit card. Env var: `GROQ_API_KEY` from https://console.groq.com/keys. (We tried HF Mistral/Nemo/Zephyr — none routed through the free chat endpoint. We then tried Google Gemini, but Gemini's free tier is unusable on any project that has billing enabled with no credits. Groq is the only no-strings-attached free path. Embeddings still use HF — that endpoint works fine.)
+
+**Backend**
+- `lib/vector-search.ts` — `findSimilarChunks({ notebookId, userId, queryEmbedding, k=5 })`. Raw SQL with cosine distance (`embedding <=> $::vector`). JOINs through Notebook so ownership is enforced **in the same query as the search** — no second roundtrip. Filters to `status = 'ready'` documents only.
+- `lib/llm.ts` — `buildRagSystemPrompt(chunks)` produces the strict "answer only from this context" system prompt with numbered chunk references. `streamChatCompletion()` is an `async function*` yielding raw text strings.
+- `app/api/chat/route.ts` — POST. Flow: auth → validate body → ownership check → require at least one Ready doc → **persist user message first** (survives downstream failures) → embed question → vector search → stream Mistral → persist assistant message in `finally` (saves whatever accumulated, even on error). Returns plain-text `ReadableStream`. `maxDuration = 60` to give HF cold-starts headroom.
+
+**Chat UI (`components/chat/`)**
+- `chat-pane.tsx` (server) — section + header + ChatThread wrapper, mirrors DocumentsPane shape
+- `chat-thread.tsx` (client) — all stateful behavior. Holds message list, optimistic UI, stream reader, auto-scroll, focus management, Enter/Shift+Enter, animated `ThinkingDots`
+- `message-bubble.tsx` — pure visual. User = right-aligned `bg-secondary` rounded bubble; assistant = left-aligned plain text body (NotebookLM-style)
+- Textarea uses shadcn's `Textarea` which has native `field-sizing: content` for auto-resize — no JS
+
+**Patterns worth remembering**
+- **Plain-text streaming over JSON/SSE** for simplicity. Client reads `response.body.getReader()` + `TextDecoder({ stream: true })` to handle UTF-8 chars split across chunks.
+- **Optimistic UI without `router.refresh()`** — append to local state on stream end, accept temp IDs until next page load swaps them with DB IDs. Prevents the flicker of optimistic→server reconciliation.
+- **User msg persisted BEFORE embedding** so questions are never lost.
+- **Assistant msg persisted in `finally`** so partial responses are kept too.
+- **Ownership baked into the search SQL** via JOIN — defense in depth that closes the "malicious notebookId" attack at the data layer.
+
 ### Up next
 
-**Phase 3 — Document Upload & Ingestion**: file upload UI → Supabase Storage, parse PDF/DOCX/TXT, LangChain `RecursiveCharacterTextSplitter` for chunking, Hugging Face embeddings → `chunks` table, document list in notebook detail.
+**Phase 5 — Conversation Memory**: sliding window (last N messages), auto-summarize older history into `Summary` row, prune from prompt context. Schema already has `Summary` model from Phase 1.
