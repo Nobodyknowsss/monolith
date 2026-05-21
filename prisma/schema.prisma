@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector, pgcrypto, pg_stat_statements, uuid_ossp(map: "uuid-ossp"), supabase_vault]
+}
+
+// User lives in Supabase auth.users — we only store the UUID as a foreign reference.
+// Access control is enforced by Supabase RLS, not by a Prisma FK.
+
+model Notebook {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+  messages  Message[]
+  summary   Summary?
+
+  @@index([userId])
+}
+
+model Document {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  fileUrl    String
+  mimeType   String?
+  notebookId String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  chunks   Chunk[]
+
+  @@index([notebookId])
+}
+
+model Chunk {
+  id         String                     @id @default(uuid()) @db.Uuid
+  text       String
+  embedding  Unsupported("vector(384)")
+  documentId String                     @db.Uuid
+  chunkIndex Int
+  createdAt  DateTime                   @default(now())
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model Message {
+  id         String   @id @default(uuid()) @db.Uuid
+  role       String // 'user' | 'assistant'
+  content    String
+  notebookId String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+
+  @@index([notebookId, createdAt])
+}
+
+model Summary {
+  id            String   @id @default(uuid()) @db.Uuid
+  content       String
+  upToMessageId String?  @db.Uuid
+  notebookId    String   @unique @db.Uuid
+  updatedAt     DateTime @updatedAt
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+}
