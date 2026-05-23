@@ -10,7 +10,7 @@ export default function AuthLayout({
     <div className="flex min-h-svh w-full flex-col items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <Link href="/" aria-label="NoteMind home">
+          <Link href="/" aria-label="Monolith home">
             <BrandMark size="lg" />
           </Link>
           <p className="text-sm text-muted-foreground">

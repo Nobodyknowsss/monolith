@@ -182,6 +182,36 @@ Built **one step at a time under user guidance**. Do not batch multiple steps wi
 - **Assistant msg persisted in `finally`** so partial responses are kept too.
 - **Ownership baked into the search SQL** via JOIN — defense in depth that closes the "malicious notebookId" attack at the data layer.
 
+### ✅ Phase 5 — Conversation Memory (complete)
+
+**Sliding window**
+- `RECENT_WINDOW_SIZE = 10` exported from `lib/llm.ts`. The chat route pulls the last 10 messages newer than the summary cutoff (oldest-first) and passes them as `history: ChatTurn[]` to `streamChatCompletion`.
+- `streamChatCompletion` signature changed: `history: ChatTurn[]` instead of `userMessage: string`. The just-persisted user message is the natural final turn of `history`.
+
+**Summarization (`lib/summary.ts`)**
+- `summarizeMessages(messages, previousSummary?)` — non-streaming Groq call, same `llama-3.3-70b-versatile` model. When `previousSummary` is passed, the system prompt asks the model to *extend or revise* the existing summary (3–5 bullets) rather than start from scratch. Cheap, incremental, no re-summarizing the same material every turn.
+- `updateNotebookSummary(notebookId)` — orchestrator. Reads the existing `Summary` row, translates `upToMessageId` → `createdAt` cutoff, fetches all messages newer than the cutoff, folds everything **older than the recent window** into a new summary, upserts the `Summary` row with the new content and new `upToMessageId`. Self-gating: returns early if `newer.length <= RECENT_WINDOW_SIZE`.
+- `SUMMARIZE_THRESHOLD = 20` exported from `lib/summary.ts`.
+
+**Wiring (`app/api/chat/route.ts`)**
+- After persisting the user message, loads `summary` + computes `cutoff` Date from `upToMessageId`.
+- Recent-window fetch now has `createdAt: { gt: cutoff }` filter — summarized turns never replay.
+- `streamChatCompletion` receives `previousSummary: summary?.content`. The LLM call injects `[Earlier in this conversation, summarized]: …` as a leading synthetic user turn ahead of the recent history.
+- In the stream's `finally`, after the assistant message is persisted and the controller is closed, **`after()` from `next/server`** schedules `updateNotebookSummary(notebookId)` to run post-response. The user never waits on summarization.
+- Trigger gate: only runs `updateNotebookSummary` if total message count > `SUMMARIZE_THRESHOLD`. The orchestrator self-gates again on whether there's actually material to fold in.
+
+**Schema**: no migration needed — the `Summary` model (with `notebookId @unique` and `upToMessageId String?`) was added back in Phase 1.
+
+**Patterns worth remembering**
+- **`upToMessageId` is a UUID, not orderable** — we hop through it once to get the boundary's `createdAt`, then use that Date as the cutoff for `gt:` filters. Two queries instead of one, but no need to denormalize a timestamp into the Summary row.
+- **Summary preface as a "user" turn**, not a second system message — Groq's chat API tolerates multiple system messages, but sticking to one system + history-shaped turns keeps the prompt easier to reason about.
+- **Incremental summarization** — passing the existing summary in the *system* prompt (not as a chat turn) lets the model extend it without confusing itself about what's "old" vs "new" content.
+- **`after()` for post-response background work** — Next.js 16 native. No queue, no cron. The summarization call runs on the same serverless invocation but after the response is flushed.
+
 ### Up next
 
-**Phase 5 — Conversation Memory**: sliding window (last N messages), auto-summarize older history into `Summary` row, prune from prompt context. Schema already has `Summary` model from Phase 1.
+Polish + deployment. Possible directions:
+- **Document re-processing UI** — retry button for `failed` documents
+- **Conversation list / rename / delete notebook flows** beyond Phase 2 dashboard
+- **Source citations in chat** — link assistant claims back to the chunk source (we already number `[1]`, `[2]` in the system prompt)
+- **Background ingestion** — move `ingestDocument` into `after()` so the upload action returns instantly instead of blocking on parse+embed

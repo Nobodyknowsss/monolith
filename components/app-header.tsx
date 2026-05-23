@@ -12,8 +12,8 @@ export function AppHeader({ userEmail }: AppHeaderProps) {
     <header className="border-b bg-background">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
         <Link
-          href="/"
-          aria-label="NoteMind home"
+          href="/dashboard"
+          aria-label="Dashboard"
           className="cursor-pointer"
         >
           <BrandMark />

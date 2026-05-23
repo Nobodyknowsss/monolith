@@ -80,7 +80,7 @@ export function UploadDropzone({ notebookId }: Props) {
         className={cn(
           "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed bg-background px-4 py-6 text-center transition-colors",
           dragOver
-            ? "border-teal-500 bg-teal-50/60 dark:bg-teal-950/30"
+            ? "border-green-500 bg-green-500/10"
             : "border-border hover:bg-muted/40",
         )}
       >
@@ -88,7 +88,7 @@ export function UploadDropzone({ notebookId }: Props) {
           <div className="flex items-center gap-2 text-sm">
             <FileText
               aria-hidden="true"
-              className="size-4 text-teal-600 dark:text-teal-400"
+              className="size-4 text-green-400"
             />
             <span className="font-medium">{file.name}</span>
             <span className="text-xs text-muted-foreground">

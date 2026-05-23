@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {signedUp && (
           <div
             role="status"
-            className="mb-4 rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900 dark:border-teal-900/60 dark:bg-teal-950/40 dark:text-teal-100"
+            className="mb-4 rounded-md border border-green-400/30 bg-green-500/10 px-3 py-2 text-sm text-green-100"
           >
             Check your inbox to confirm your email, then sign in.
           </div>
@@ -66,10 +66,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          New to NoteMind?{" "}
+          New to Monolith?{" "}
           <Link
             href="/signup"
-            className="font-medium text-teal-700 underline-offset-4 hover:underline dark:text-teal-400"
+            className="font-medium text-green-400 underline-offset-4 hover:underline"
           >
             Create an account
           </Link>

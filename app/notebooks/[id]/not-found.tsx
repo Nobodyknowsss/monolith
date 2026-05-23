@@ -22,7 +22,7 @@ export default function NotebookNotFound() {
           it.
         </p>
       </div>
-      <Link href="/" className={cn(buttonVariants(), "cursor-pointer")}>
+      <Link href="/dashboard" className={cn(buttonVariants(), "cursor-pointer")}>
         Back to your notebooks
       </Link>
     </div>

@@ -7,9 +7,9 @@ type Props = { document: DocumentListItem };
 
 const STATUS_STYLES: Record<DocumentListItem["status"], string> = {
   processing:
-    "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-400/30",
+    "bg-amber-500/10 text-amber-300 ring-amber-400/30",
   ready:
-    "bg-teal-50 text-teal-700 ring-teal-600/20 dark:bg-teal-950/40 dark:text-teal-300 dark:ring-teal-400/30",
+    "bg-green-500/10 text-green-300 ring-green-400/30",
   failed: "bg-destructive/10 text-destructive ring-destructive/30",
 };
 

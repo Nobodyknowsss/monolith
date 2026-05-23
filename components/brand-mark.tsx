@@ -25,12 +25,12 @@ export function BrandMark({
       <NotebookPen
         aria-hidden="true"
         size={iconSize}
-        className="text-teal-600 dark:text-teal-400"
+        className="text-green-400"
         strokeWidth={2}
       />
       {showWordmark && (
         <span className={cn("font-semibold tracking-tight", text)}>
-          NoteMind
+          Monolith
         </span>
       )}
     </div>

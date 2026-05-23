@@ -42,7 +42,7 @@ export default async function NotebookPage({ params }: NotebookPageProps) {
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-8">
         <div className="space-y-4">
           <Link
-            href="/"
+            href="/dashboard"
             className="inline-flex cursor-pointer items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />

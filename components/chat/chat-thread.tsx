@@ -18,26 +18,73 @@ type Props = {
   hasReadyDocuments: boolean;
 };
 
+// Typewriter pacing: each tick is ~16ms (~60fps). The chars-per-tick is
+// computed dynamically so any buffered text drains in ~1.3 seconds — long
+// responses don't drag, short ones don't fly by.
+const REVEAL_TICK_MS = 16;
+const REVEAL_DRAIN_TICKS = 80;
+
 export function ChatThread({
   notebookId,
   initialMessages,
   hasReadyDocuments,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [streamingText, setStreamingText] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
+  // streamTarget = full text the server has streamed in so far.
+  // displayedText = what the user actually sees; animates toward streamTarget.
+  const [streamTarget, setStreamTarget] = useState("");
+  const [displayedText, setDisplayedText] = useState("");
+  const [streamDone, setStreamDone] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const isAnimating = displayedText.length < streamTarget.length;
+  const isStreaming = isWaiting || isAnimating;
+
+  // Typewriter loop: advance displayedText toward streamTarget. Re-runs on
+  // every displayed/target change so the animation continues smoothly while
+  // new server chunks arrive.
+  useEffect(() => {
+    if (!isAnimating) return;
+    const id = setTimeout(() => {
+      setDisplayedText((prev) => {
+        const remaining = streamTarget.length - prev.length;
+        if (remaining <= 0) return prev;
+        const chars = Math.max(1, Math.ceil(remaining / REVEAL_DRAIN_TICKS));
+        return streamTarget.slice(0, prev.length + chars);
+      });
+    }, REVEAL_TICK_MS);
+    return () => clearTimeout(id);
+  }, [displayedText, streamTarget, isAnimating]);
+
+  // Commit assistant message once both: (a) server stream is done AND
+  // (b) the typewriter has caught up. Avoids visual snap-to-final.
+  useEffect(() => {
+    if (!streamDone || isAnimating || !streamTarget) return;
+    const final = streamTarget;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `tmp-assist-${Date.now()}`,
+        role: "assistant",
+        content: final,
+      },
+    ]);
+    setStreamTarget("");
+    setDisplayedText("");
+    setStreamDone(false);
+  }, [streamDone, isAnimating, streamTarget]);
+
   // Auto-scroll on new content
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, streamingText, isStreaming]);
+  }, [messages, displayedText, isWaiting]);
 
   // Auto-focus on mount when input is usable
   useEffect(() => {
@@ -60,8 +107,10 @@ export function ChatThread({
       content: question,
     };
     setMessages((prev) => [...prev, userMsg]);
-    setStreamingText("");
-    setIsStreaming(true);
+    setStreamTarget("");
+    setDisplayedText("");
+    setStreamDone(false);
+    setIsWaiting(true);
 
     try {
       const res = await fetch("/api/chat", {
@@ -75,7 +124,7 @@ export function ChatThread({
           | { error?: string }
           | null;
         setError(data?.error ?? `Request failed (${res.status})`);
-        setIsStreaming(false);
+        setIsWaiting(false);
         return;
       }
 
@@ -86,25 +135,16 @@ export function ChatThread({
         const { done, value } = await reader.read();
         if (done) break;
         buf += decoder.decode(value, { stream: true });
-        setStreamingText(buf);
+        setStreamTarget(buf);
       }
 
-      if (buf.trim()) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `tmp-assist-${Date.now()}`,
-            role: "assistant",
-            content: buf,
-          },
-        ]);
-      }
-      setStreamingText("");
-      setIsStreaming(false);
+      // Server is done; the commit effect waits for the typewriter to catch up.
+      setStreamDone(true);
+      setIsWaiting(false);
     } catch (err) {
       console.error("[chat] client error:", err);
       setError("Network error. Please try again.");
-      setIsStreaming(false);
+      setIsWaiting(false);
     } finally {
       // Return focus to the input for the next question.
       inputRef.current?.focus();
@@ -137,10 +177,10 @@ export function ChatThread({
                 content={m.content}
               />
             ))}
-            {isStreaming && streamingText && (
-              <MessageBubble role="assistant" content={streamingText} />
+            {isStreaming && displayedText && (
+              <MessageBubble role="assistant" content={displayedText} />
             )}
-            {isStreaming && !streamingText && (
+            {isStreaming && !displayedText && (
               <div
                 className="flex justify-start px-1 text-muted-foreground"
                 aria-live="polite"

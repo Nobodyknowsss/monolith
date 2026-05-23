@@ -23,7 +23,7 @@ export function ChatPane({
       <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-medium">
         <MessageSquare
           aria-hidden="true"
-          className="size-4 text-teal-600 dark:text-teal-400"
+          className="size-4 text-green-400"
         />
         Chat
       </div>

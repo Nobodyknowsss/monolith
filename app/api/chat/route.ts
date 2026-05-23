@@ -1,9 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { embed } from "@/lib/embeddings";
 import { findSimilarChunks } from "@/lib/vector-search";
-import { buildRagSystemPrompt, streamChatCompletion } from "@/lib/llm";
+import {
+  buildRagSystemPrompt,
+  streamChatCompletion,
+  RECENT_WINDOW_SIZE,
+  type ChatTurn,
+} from "@/lib/llm";
+import {
+  SUMMARIZE_THRESHOLD,
+  updateNotebookSummary,
+} from "@/lib/summary";
 
 export const maxDuration = 60;
 
@@ -98,6 +107,41 @@ export async function POST(request: Request) {
 
   const system = buildRagSystemPrompt(chunks);
 
+  // Load the running summary (if any) and translate its upToMessageId boundary
+  // into a createdAt cutoff so the sliding window doesn't replay already-
+  // summarized turns.
+  const summary = await prisma.summary.findUnique({
+    where: { notebookId },
+    select: { content: true, upToMessageId: true },
+  });
+  let cutoff: Date | null = null;
+  if (summary?.upToMessageId) {
+    const boundary = await prisma.message.findUnique({
+      where: { id: summary.upToMessageId },
+      select: { createdAt: true },
+    });
+    cutoff = boundary?.createdAt ?? null;
+  }
+
+  // Sliding-window history: pull the last N messages newer than the cutoff
+  // (newest-first), reverse to oldest-first. Includes the user message we
+  // just persisted as the final turn.
+  const recent = await prisma.message.findMany({
+    where: {
+      notebookId,
+      ...(cutoff ? { createdAt: { gt: cutoff } } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: RECENT_WINDOW_SIZE,
+    select: { role: true, content: true },
+  });
+  const history: ChatTurn[] = recent
+    .reverse()
+    .map((m) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+    }));
+
   const encoder = new TextEncoder();
   let fullText = "";
 
@@ -106,7 +150,8 @@ export async function POST(request: Request) {
       try {
         for await (const piece of streamChatCompletion({
           system,
-          userMessage: question,
+          history,
+          previousSummary: summary?.content ?? undefined,
         })) {
           fullText += piece;
           controller.enqueue(encoder.encode(piece));
@@ -130,6 +175,20 @@ export async function POST(request: Request) {
           }
         }
         controller.close();
+
+        // After the response is delivered, check whether this notebook has
+        // grown past the threshold and extend its rolling summary if so.
+        // Runs after() the response is flushed so the user never waits on it.
+        after(async () => {
+          try {
+            const total = await prisma.message.count({ where: { notebookId } });
+            if (total > SUMMARIZE_THRESHOLD) {
+              await updateNotebookSummary(notebookId);
+            }
+          } catch (err) {
+            console.error("[chat] summary update failed:", err);
+          }
+        });
       }
     },
   });

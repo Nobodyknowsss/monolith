@@ -6,6 +6,13 @@ import type { RetrievedChunk } from "@/lib/vector-search";
 // bite: llama-3.1-8b-instant (smaller, faster), gemma2-9b-it, mixtral-8x7b-32768.
 const MODEL = "llama-3.3-70b-versatile";
 
+// Sliding window for conversation memory: max prior turns sent to the LLM.
+// 10 = roughly 5 user + 5 assistant exchanges, enough for natural follow-ups
+// without bloating the prompt.
+export const RECENT_WINDOW_SIZE = 10;
+
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
 let client: Groq | null = null;
 
 function getClient(): Groq {
@@ -41,21 +48,32 @@ ${contextBlocks}
 
 export async function* streamChatCompletion({
   system,
-  userMessage,
+  history,
+  previousSummary,
   maxTokens = 1024,
   temperature = 0.2,
 }: {
   system: string;
-  userMessage: string;
+  history: ChatTurn[];
+  previousSummary?: string;
   maxTokens?: number;
   temperature?: number;
 }): AsyncIterable<string> {
   const c = getClient();
+  const summaryPreface: ChatTurn[] = previousSummary
+    ? [
+        {
+          role: "user",
+          content: `[Earlier in this conversation, summarized]:\n${previousSummary}`,
+        },
+      ]
+    : [];
   const stream = await c.chat.completions.create({
     model: MODEL,
     messages: [
       { role: "system", content: system },
-      { role: "user", content: userMessage },
+      ...summaryPreface,
+      ...history,
     ],
     stream: true,
     max_tokens: maxTokens,
