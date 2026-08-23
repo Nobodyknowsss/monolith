@@ -9,21 +9,28 @@ import {
   MessageSquare,
   NotebookPen,
   ShieldCheck,
+  CheckCircle2,
+  Sparkles,
+  Layers,
+  FileCode2,
 } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 import { BrandMark } from "@/components/brand-mark";
 import { getUser } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 
 export default async function LandingPage() {
   const user = await getUser();
   const isLoggedIn = !!user;
 
   return (
-    <div className="min-h-svh">
+    <div
+      style={{ backgroundColor: "#020503", color: "#e3ece6" }}
+      className="min-h-screen font-sans selection:bg-[#4ade80] selection:text-[#020503]"
+    >
       <LandingHeader isLoggedIn={isLoggedIn} />
       <Hero isLoggedIn={isLoggedIn} />
-      <Preview />
+      <TrustBar />
+      <VisualizerSection />
+      <BentoPhilosophy />
       <Features />
       <HowItWorks />
       <FinalCta isLoggedIn={isLoggedIn} />
@@ -34,50 +41,72 @@ export default async function LandingPage() {
 
 function LandingHeader({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4">
-        <Link href="/" aria-label="Monolith home" className="cursor-pointer">
+    <header
+      style={{
+        backgroundColor: "rgba(2, 5, 3, 0.9)",
+        borderColor: "rgba(34, 197, 94, 0.2)",
+      }}
+      className="sticky top-0 z-50 border-b backdrop-blur-xl"
+    >
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <Link href="/" className="cursor-pointer">
           <BrandMark />
         </Link>
-        <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+
+        <nav className="hidden items-center gap-8 text-xs font-mono uppercase tracking-widest text-[#729a82] md:flex">
           <a
             href="#features"
-            className="transition-colors hover:text-foreground"
+            className="hover:text-[#4ade80] transition-colors"
           >
             Features
           </a>
           <a
             href="#how-it-works"
-            className="transition-colors hover:text-foreground"
+            className="hover:text-[#4ade80] transition-colors"
           >
             How it works
           </a>
+          <a
+            href="/dashboard"
+            className="hover:text-[#4ade80] transition-colors"
+          >
+            Dashboard
+          </a>
         </nav>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-3">
           {isLoggedIn ? (
             <Link
               href="/dashboard"
-              className={cn(buttonVariants(), "cursor-pointer")}
+              style={{
+                backgroundColor: "#22c55e",
+                color: "#020503",
+                boxShadow: "0 0 25px rgba(34, 197, 94, 0.5)",
+              }}
+              className="inline-flex h-9 items-center gap-2 rounded-full px-5 text-xs font-bold uppercase tracking-wider transition-transform hover:scale-105"
             >
-              Open dashboard
-              <ArrowRight aria-hidden="true" className="size-4" />
+              Dashboard
+              <ArrowRight className="size-3.5" />
             </Link>
           ) : (
             <>
               <Link
                 href="/login"
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "cursor-pointer",
-                )}
+                className="px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-[#8caea0] hover:text-[#4ade80] transition-colors"
               >
-                Log in
+                Log In
               </Link>
               <Link
-                href="/signup"
-                className={cn(buttonVariants(), "cursor-pointer")}
+                href="/dashboard"
+                style={{
+                  backgroundColor: "#22c55e",
+                  color: "#020503",
+                  boxShadow: "0 0 25px rgba(34, 197, 94, 0.5)",
+                }}
+                className="inline-flex h-9 items-center gap-2 rounded-full px-5 text-xs font-bold uppercase tracking-wider transition-transform hover:scale-105"
               >
-                Sign up
+                Try It Out
+                <ArrowRight className="size-3.5" />
               </Link>
             </>
           )}
@@ -89,204 +118,573 @@ function LandingHeader({ isLoggedIn }: { isLoggedIn: boolean }) {
 
 function Hero({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden pt-20 pb-16 text-center">
+      {/* Intense Emerald Radial Glow */}
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-green-500/20 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(34,197,94,0.3) 0%, rgba(34,197,94,0.05) 50%, transparent 70%)",
+        }}
+        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/4 size-[650px] blur-2xl"
       />
-      <div className="mx-auto max-w-3xl px-6 pb-12 pt-20 text-center sm:pt-28">
-        <span className="inline-flex items-center gap-2 rounded-full border border-green-400/30 bg-green-500/10 px-3 py-1 text-xs font-medium text-green-200">
-          <span className="size-1.5 rounded-full bg-green-400" />
-          Notes that answer back.
-        </span>
-        <h1 className="mt-6 text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
-          Stop searching your notes.{" "}
-          <span className="text-muted-foreground">Start asking them.</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
-          Upload your documents and chat with an AI that only answers from what
-          you&rsquo;ve uploaded &mdash; never from outside knowledge, never made
-          up.
-        </p>
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          {isLoggedIn ? (
-            <Link
-              href="/dashboard"
-              className={cn(buttonVariants({ size: "lg" }), "cursor-pointer")}
-            >
-              Open dashboard
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/signup"
-                className={cn(buttonVariants({ size: "lg" }), "cursor-pointer")}
-              >
-                Get started &mdash; it&rsquo;s free
-                <ArrowRight aria-hidden="true" className="size-4" />
-              </Link>
-              <Link
-                href="/login"
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "lg" }),
-                  "cursor-pointer",
-                )}
-              >
-                I already have an account
-              </Link>
-            </>
-          )}
-        </div>
-        <div className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck
-            aria-hidden="true"
-            className="size-3.5 text-green-400"
+
+      <div className="relative mx-auto max-w-4xl px-6">
+        <div
+          style={{
+            backgroundColor: "#071c0e",
+            borderColor: "#22c55e",
+            color: "#4ade80",
+          }}
+          className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-mono uppercase tracking-widest"
+        >
+          <span
+            style={{
+              backgroundColor: "#4ade80",
+              boxShadow: "0 0 10px #4ade80",
+            }}
+            className="size-2 rounded-full animate-pulse"
           />
-          Your documents stay private to your account.
+          ✦ Notes that answer back
+        </div>
+
+        <h1 className="mt-8 font-serif text-5xl tracking-tight text-white sm:text-7xl leading-[1.1]">
+          Stop searching your notes. <br />
+          <span style={{ color: "#4ade80" }} className="italic">
+            Start asking them.
+          </span>
+        </h1>
+
+        <p className="mx-auto mt-6 max-w-xl text-base text-[#9ec4ad] leading-relaxed">
+          Upload your documents and chat with an AI that only answers from what
+          you’ve uploaded &mdash; strictly grounded, cite-backed, and zero
+          hallucinations.
+        </p>
+
+        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row font-mono text-xs">
+          <Link
+            href="/dashboard"
+            style={{
+              backgroundColor: "#22c55e",
+              color: "#020503",
+              boxShadow: "0 0 30px rgba(34, 197, 94, 0.45)",
+            }}
+            className="inline-flex h-12 w-full sm:w-auto items-center justify-center rounded-lg px-8 font-bold uppercase tracking-wider transition-all hover:bg-[#4ade80] hover:scale-105"
+          >
+            {isLoggedIn ? "Open Dashboard" : "Get started — it's free"}
+          </Link>
+          <Link
+            href="/dashboard"
+            style={{
+              backgroundColor: "#06150b",
+              borderColor: "#1b4327",
+              color: "#86efac",
+            }}
+            className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-lg border px-7 font-bold uppercase tracking-wider transition-all hover:border-[#22c55e] hover:text-white"
+          >
+            <Sparkles style={{ color: "#4ade80" }} className="size-4" />
+            Try it out
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-function Preview() {
+function TrustBar() {
   return (
-    <section className="relative mx-auto max-w-3xl px-6 pb-24">
-      <div className="relative rounded-2xl border border-border/80 bg-card p-6 shadow-2xl sm:p-8">
+    <div
+      style={{
+        backgroundColor: "#040e07",
+        borderColor: "rgba(34, 197, 94, 0.2)",
+      }}
+      className="border-y py-4 font-mono text-xs"
+    >
+      <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-around gap-6 px-6 text-[#9bc4ad]">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 style={{ color: "#4ade80" }} className="size-4" />
+          <span>Line-by-line citation</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <ShieldCheck style={{ color: "#4ade80" }} className="size-4" />
+          <span>Strict context isolation</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Brain style={{ color: "#4ade80" }} className="size-4" />
+          <span>Zero external fabrication</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VisualizerSection() {
+  const bars = [
+    18, 35, 55, 25, 75, 95, 45, 80, 100, 40, 70, 35, 85, 95, 50, 90, 35, 60, 75,
+    40,
+  ];
+
+  return (
+    <section className="relative mx-auto max-w-4xl px-6 py-12">
+      <div
+        style={{
+          backgroundColor: "#031107",
+          borderColor: "#184a25",
+          boxShadow: "0 0 50px rgba(34, 197, 94, 0.2)",
+        }}
+        className="relative overflow-hidden rounded-2xl border p-8"
+      >
+        {/* Neon Green Underglow */}
         <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -inset-x-12 -inset-y-6 -z-10 rounded-[2.5rem] bg-green-500/15 blur-3xl"
+          style={{
+            background:
+              "linear-gradient(to top, rgba(34, 197, 94, 0.45) 0%, rgba(34, 197, 94, 0.1) 40%, transparent 80%)",
+          }}
+          className="pointer-events-none absolute -bottom-10 left-0 right-0 h-44 blur-xl"
         />
-        <div className="space-y-5">
-          <div className="flex justify-end">
-            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-secondary px-4 py-2.5 text-sm">
-              What were the three key takeaways from the Q1 strategy memo?
+
+        <div className="text-center font-mono text-xs uppercase tracking-widest text-[#4ade80]">
+          Interactive retrieval demonstration
+        </div>
+
+        {/* Green Waveform + Glowing Center Button */}
+        <div className="relative mt-8 flex items-center justify-center gap-2 sm:gap-3 h-36">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {bars.slice(0, 10).map((h, i) => (
+              <div
+                key={`left-${i}`}
+                style={{
+                  height: `${h}%`,
+                  backgroundColor: "#4ade80",
+                  boxShadow: "0 0 8px rgba(74, 222, 128, 0.6)",
+                }}
+                className="w-1.5 rounded-full"
+              />
+            ))}
+          </div>
+
+          <div
+            style={{
+              backgroundColor: "#22c55e",
+              borderColor: "#86efac",
+              boxShadow: "0 0 35px rgba(74, 222, 128, 0.9)",
+              color: "#020503",
+            }}
+            className="relative z-10 flex size-16 items-center justify-center rounded-full border-2"
+          >
+            <MessageSquare className="size-7" />
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {bars.slice(10, 20).map((h, i) => (
+              <div
+                key={`right-${i}`}
+                style={{
+                  height: `${h}%`,
+                  backgroundColor: "#4ade80",
+                  boxShadow: "0 0 8px rgba(74, 222, 128, 0.6)",
+                }}
+                className="w-1.5 rounded-full"
+              />
+            ))}
+          </div>
+        </div>
+
+        <p className="mt-8 text-center font-mono text-xs tracking-wider uppercase text-[#7cb390]">
+          Synthesizing insights across indexed PDF, DOCX, & Markdown
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function BentoPhilosophy() {
+  return (
+    <section
+      style={{
+        backgroundColor: "#030805",
+        borderColor: "rgba(34, 197, 94, 0.15)",
+      }}
+      className="border-t py-24"
+    >
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="text-center mb-16">
+          <div
+            style={{
+              backgroundColor: "#061c0e",
+              borderColor: "#22c55e",
+              color: "#4ade80",
+            }}
+            className="inline-block rounded-full border px-3.5 py-1 text-[11px] font-mono uppercase tracking-widest mb-4"
+          >
+            ✦ WHY MONOLITH
+          </div>
+          <h2 className="font-serif text-3xl sm:text-5xl text-white">
+            Why Choose
+            <br />
+            Monolith
+          </h2>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="space-y-6">
+            <div
+              style={{
+                backgroundColor: "#05140a",
+                borderColor: "#184224",
+              }}
+              className="rounded-xl border p-6"
+            >
+              <div
+                style={{
+                  backgroundColor: "#0b2b16",
+                  borderColor: "#4ade80",
+                  color: "#4ade80",
+                }}
+                className="size-8 rounded border flex items-center justify-center mb-4"
+              >
+                <Quote className="size-4" />
+              </div>
+              <h3 className="font-medium text-white text-base">
+                Grounded in your sources
+              </h3>
+              <p className="mt-2 text-xs text-[#8ab59c] leading-relaxed">
+                Every single answer quotes directly from your uploaded files.
+              </p>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "#05140a",
+                borderColor: "#184224",
+              }}
+              className="rounded-xl border p-6"
+            >
+              <div
+                style={{
+                  backgroundColor: "#0b2b16",
+                  borderColor: "#4ade80",
+                  color: "#4ade80",
+                }}
+                className="size-8 rounded border flex items-center justify-center mb-4"
+              >
+                <Search className="size-4" />
+              </div>
+              <h3 className="font-medium text-white text-base">
+                Semantic Vector Search
+              </h3>
+              <p className="mt-2 text-xs text-[#8ab59c] leading-relaxed">
+                Vector embeddings find context without relying on exact matching
+                words.
+              </p>
             </div>
           </div>
-          <div className="max-w-[92%] text-sm leading-relaxed text-foreground">
-            Based on{" "}
-            <span className="font-medium text-green-300">q1-strategy.pdf</span>
-            , the three key takeaways were:
-            <br />
-            <br />
-            1. Ship the new chat surface by end of quarter.
-            <br />
-            2. Migrate the auth stack to the new SDK.
-            <br />
-            3. Cut document ingestion latency by 40%.
+
+          {/* Center Glowing Showcase Card */}
+          <div
+            style={{
+              backgroundColor: "#071f10",
+              borderColor: "#22c55e",
+              boxShadow: "0 0 35px rgba(34, 197, 94, 0.25)",
+            }}
+            className="relative overflow-hidden rounded-xl border p-8 text-center flex flex-col items-center justify-center"
+          >
+            <div
+              style={{
+                backgroundColor: "#0d3119",
+                borderColor: "#4ade80",
+                color: "#4ade80",
+                boxShadow: "0 0 20px rgba(74, 222, 128, 0.5)",
+              }}
+              className="size-20 rounded-full border-2 flex items-center justify-center mb-6"
+            >
+              <Brain className="size-9" />
+            </div>
+            <div className="text-xs uppercase tracking-widest text-[#4ade80] font-mono mb-2">
+              CORE PRINCIPLE
+            </div>
+            <blockquote className="font-serif text-lg text-white leading-snug italic">
+              “AI should never guess what it doesn't know. Answers must always
+              trace back to an exact line in your notes.”
+            </blockquote>
           </div>
-        </div>
-        <div className="mt-6 flex items-center gap-2 border-t border-border/60 pt-4 text-xs text-muted-foreground">
-          <FileText aria-hidden="true" className="size-3.5 text-green-400" />
-          Grounded in 1 source &middot; no outside knowledge used
+
+          <div className="space-y-6">
+            <div
+              style={{
+                backgroundColor: "#05140a",
+                borderColor: "#184224",
+              }}
+              className="rounded-xl border p-6"
+            >
+              <div
+                style={{
+                  backgroundColor: "#0b2b16",
+                  borderColor: "#4ade80",
+                  color: "#4ade80",
+                }}
+                className="size-8 rounded border flex items-center justify-center mb-4"
+              >
+                <Layers className="size-4" />
+              </div>
+              <h3 className="font-medium text-white text-base">
+                Conversation Memory
+              </h3>
+              <p className="mt-2 text-xs text-[#8ab59c] leading-relaxed">
+                Sessions auto-summarize so your context window never spills
+                over.
+              </p>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "#05140a",
+                borderColor: "#184224",
+              }}
+              className="rounded-xl border p-6"
+            >
+              <div
+                style={{
+                  backgroundColor: "#0b2b16",
+                  borderColor: "#4ade80",
+                  color: "#4ade80",
+                }}
+                className="size-8 rounded border flex items-center justify-center mb-4"
+              >
+                <ShieldCheck className="size-4" />
+              </div>
+              <h3 className="font-medium text-white text-base">
+                Locked-Down Vault
+              </h3>
+              <p className="mt-2 text-xs text-[#8ab59c] leading-relaxed">
+                Your data stays strictly scoped and is never used to train
+                external models.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
-
-const FEATURES = [
-  {
-    icon: FileText,
-    title: "Bring your own documents",
-    desc: "PDF, DOCX, or plain text. Up to 10MB each. Everything stays scoped to your account.",
-  },
-  {
-    icon: Quote,
-    title: "Grounded in your sources",
-    desc: "Every answer comes from your uploaded documents. If it’s not in the notes, the model says so.",
-  },
-  {
-    icon: Search,
-    title: "Semantic search",
-    desc: "Vector embeddings find the right passage even when your question doesn’t share words with the source.",
-  },
-  {
-    icon: Brain,
-    title: "Conversation memory",
-    desc: "Follow up naturally. Long sessions get auto-summarized so context never spills over.",
-  },
-];
 
 function Features() {
   return (
-    <section id="features" className="border-t border-border/60 py-24">
+    <section
+      id="features"
+      style={{
+        backgroundColor: "#020503",
+        borderColor: "rgba(34, 197, 94, 0.15)",
+      }}
+      className="border-t py-24"
+    >
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto mb-16 max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Built for focused research.
+        <div className="text-center mb-16">
+          <div
+            style={{
+              backgroundColor: "#061c0e",
+              borderColor: "#22c55e",
+              color: "#4ade80",
+            }}
+            className="inline-block rounded-full border px-3.5 py-1 text-[11px] font-mono uppercase tracking-widest mb-4"
+          >
+            ✦ FEATURES
+          </div>
+          <h2 className="font-serif text-3xl sm:text-5xl text-white">
+            Everything your research requires, <br />
+            handled automatically
           </h2>
-          <p className="mt-4 text-muted-foreground">
-            Every feature exists for one reason: helping you find answers in
-            what you&rsquo;ve already written.
-          </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map(({ icon: Icon, title, desc }) => (
+
+        <div className="grid gap-8 lg:grid-cols-12 items-center">
+          <div className="space-y-4 lg:col-span-5">
             <div
-              key={title}
-              className="rounded-xl border border-border/60 bg-card p-5 transition-colors hover:border-green-400/40"
+              style={{
+                backgroundColor: "#05140a",
+                borderColor: "#184224",
+              }}
+              className="rounded-xl border p-4"
             >
-              <div className="flex size-9 items-center justify-center rounded-md bg-green-500/10 text-green-400 ring-1 ring-inset ring-green-400/30">
-                <Icon aria-hidden="true" className="size-4" />
+              <div className="flex items-center gap-3 text-white font-medium text-sm">
+                <FileText style={{ color: "#4ade80" }} className="size-4" />
+                Bring your own documents
               </div>
-              <h3 className="mt-4 font-medium">{title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {desc}
+              <p className="mt-1 text-xs text-[#82aa94] pl-7">
+                PDF, DOCX, or plain text up to 10MB each.
               </p>
             </div>
-          ))}
+
+            <div
+              style={{
+                backgroundColor: "#082613",
+                borderColor: "#22c55e",
+                boxShadow: "0 0 20px rgba(34, 197, 94, 0.25)",
+              }}
+              className="rounded-xl border-2 p-4"
+            >
+              <div className="flex items-center gap-3 text-[#4ade80] font-medium text-sm">
+                <CheckCircle2 className="size-4" />
+                Strict context grounding
+              </div>
+              <p className="mt-1 text-xs text-[#a9d8bd] pl-7">
+                Replies only derive from your notes with highlighted passages.
+              </p>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "#05140a",
+                borderColor: "#184224",
+              }}
+              className="rounded-xl border p-4"
+            >
+              <div className="flex items-center gap-3 text-white font-medium text-sm">
+                <FileCode2 style={{ color: "#4ade80" }} className="size-4" />
+                Automated Chunk & Embed
+              </div>
+              <p className="mt-1 text-xs text-[#82aa94] pl-7">
+                Instant chunking algorithm maps text to high-dimensional space.
+              </p>
+            </div>
+          </div>
+
+          <div
+            style={{
+              backgroundColor: "#061b0d",
+              borderColor: "#22c55e",
+              boxShadow: "0 0 35px rgba(34, 197, 94, 0.2)",
+            }}
+            className="rounded-2xl border p-6 lg:col-span-7"
+          >
+            <div
+              style={{ borderColor: "#154222" }}
+              className="flex items-center justify-between border-b pb-4"
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  style={{
+                    backgroundColor: "#4ade80",
+                    boxShadow: "0 0 8px #4ade80",
+                  }}
+                  className="size-2.5 rounded-full"
+                />
+                <span className="text-sm font-semibold text-white">
+                  Live Query Session
+                </span>
+              </div>
+              <span className="text-xs text-[#4ade80] font-mono">
+                SOURCE VERIFIED
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="flex justify-end">
+                <div
+                  style={{
+                    backgroundColor: "#0c2b16",
+                    borderColor: "#22c55e",
+                  }}
+                  className="rounded-lg border px-4 py-2 text-xs text-white"
+                >
+                  What were the three key takeaways from the Q1 strategy memo?
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "#030d06",
+                  borderColor: "#163f20",
+                }}
+                className="rounded-lg border p-4 text-xs leading-relaxed text-[#d7ebd9]"
+              >
+                <div className="mb-2 font-mono text-[11px] text-[#4ade80]">
+                  ✦ Grounded in q1-strategy.pdf (Page 4)
+                </div>
+                <ol className="list-decimal space-y-1 pl-4 text-neutral-200">
+                  <li>
+                    Ship the new interactive chat surface by end of quarter.
+                  </li>
+                  <li>
+                    Migrate the authentication stack to the latest Next.js SDK.
+                  </li>
+                  <li>
+                    Cut document ingestion and vector parsing latency by 40%.
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-const STEPS = [
-  {
-    num: "1",
-    icon: NotebookPen,
-    title: "Create a notebook",
-    desc: "One per topic, project, or research thread.",
-  },
-  {
-    num: "2",
-    icon: Upload,
-    title: "Upload documents",
-    desc: "Drop PDFs, DOCX, or TXT files. We chunk and embed them automatically.",
-  },
-  {
-    num: "3",
-    icon: MessageSquare,
-    title: "Ask anything",
-    desc: "Type a question. Get an answer grounded in your sources.",
-  },
-];
-
 function HowItWorks() {
+  const steps = [
+    {
+      num: "01",
+      icon: NotebookPen,
+      title: "Create a notebook",
+      desc: "One isolated vault per topic, project, or research thread.",
+    },
+    {
+      num: "02",
+      icon: Upload,
+      title: "Upload documents",
+      desc: "Drop PDFs, DOCX, or TXT. We chunk and embed them automatically.",
+    },
+    {
+      num: "03",
+      icon: MessageSquare,
+      title: "Ask anything",
+      desc: "Type a query and get answers grounded purely in your sources.",
+    },
+  ];
+
   return (
-    <section id="how-it-works" className="border-t border-border/60 py-24">
-      <div className="mx-auto max-w-5xl px-6">
-        <div className="mb-16 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Three steps.
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            From upload to answer in under a minute.
-          </p>
+    <section
+      id="how-it-works"
+      style={{
+        backgroundColor: "#030805",
+        borderColor: "rgba(34, 197, 94, 0.15)",
+      }}
+      className="border-t py-24"
+    >
+      <div className="mx-auto max-w-5xl px-6 text-center">
+        <div
+          style={{
+            backgroundColor: "#061c0e",
+            borderColor: "#22c55e",
+            color: "#4ade80",
+          }}
+          className="inline-block rounded-full border px-3.5 py-1 text-[11px] font-mono uppercase tracking-widest mb-4"
+        >
+          ✦ THREE STEPS
         </div>
-        <div className="grid gap-10 md:grid-cols-3">
-          {STEPS.map(({ num, icon: Icon, title, desc }) => (
-            <div key={num} className="text-center">
-              <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-green-500/10 text-green-400 ring-1 ring-inset ring-green-400/30">
-                <Icon aria-hidden="true" className="size-6" />
-              </div>
-              <div className="mt-4 text-xs font-medium tracking-wider text-green-400">
-                STEP {num}
-              </div>
-              <h3 className="mt-1 text-lg font-medium">{title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
+        <h2 className="font-serif text-3xl sm:text-5xl text-white mb-16">
+          From raw document to verified answer <br />
+          in under a minute
+        </h2>
+
+        <div className="grid gap-6 md:grid-cols-3 text-left">
+          {steps.map((step) => (
+            <div
+              key={step.num}
+              style={{
+                backgroundColor: "#05140a",
+                borderColor: "#184224",
+              }}
+              className="rounded-xl border p-6 transition-all hover:border-[#22c55e]"
+            >
+              <span className="font-mono text-xs font-bold text-[#4ade80]">
+                STEP {step.num}
+              </span>
+              <h3 className="mt-3 font-medium text-white text-base">
+                {step.title}
+              </h3>
+              <p className="mt-2 text-xs text-[#8eb8a0] leading-relaxed">
+                {step.desc}
+              </p>
             </div>
           ))}
         </div>
@@ -297,36 +695,39 @@ function HowItWorks() {
 
 function FinalCta({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
-    <section className="border-t border-border/60 py-24">
-      <div className="relative mx-auto max-w-4xl px-6 text-center">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-20 -top-10 -z-10 h-40 rounded-full bg-green-500/20 blur-3xl"
-        />
-        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+    <section
+      style={{ borderColor: "rgba(34, 197, 94, 0.2)" }}
+      className="relative overflow-hidden border-t py-24 text-center"
+    >
+      {/* Huge Emerald Glow Center */}
+      <div
+        style={{
+          background:
+            "radial-gradient(circle, rgba(34,197,94,0.35) 0%, rgba(34,197,94,0.05) 60%, transparent 80%)",
+        }}
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[650px] blur-2xl"
+      />
+
+      <div className="relative mx-auto max-w-3xl px-6">
+        <h2 className="font-serif text-4xl sm:text-6xl text-white leading-tight">
           Your notes are waiting.
         </h2>
-        <p className="mt-4 text-muted-foreground">
-          Start a notebook in seconds. Free while we&rsquo;re in early access.
+        <p className="mx-auto mt-4 max-w-lg text-sm text-[#9ec4ad]">
+          Start your first notebook in seconds. Free while in early access.
         </p>
-        <div className="mt-8">
-          {isLoggedIn ? (
-            <Link
-              href="/dashboard"
-              className={cn(buttonVariants({ size: "lg" }), "cursor-pointer")}
-            >
-              Open dashboard
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-          ) : (
-            <Link
-              href="/signup"
-              className={cn(buttonVariants({ size: "lg" }), "cursor-pointer")}
-            >
-              Start your first notebook
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-          )}
+        <div className="mt-8 flex justify-center font-mono">
+          <Link
+            href="/dashboard"
+            style={{
+              backgroundColor: "#22c55e",
+              color: "#020503",
+              boxShadow: "0 0 35px rgba(34, 197, 94, 0.6)",
+            }}
+            className="inline-flex h-12 items-center gap-2 rounded-full px-8 text-xs font-bold uppercase tracking-wider transition-transform hover:scale-105 hover:bg-[#4ade80]"
+          >
+            {isLoggedIn ? "Open Dashboard" : "Start your first notebook"}
+            <ArrowRight className="size-4" />
+          </Link>
         </div>
       </div>
     </section>
@@ -335,10 +736,16 @@ function FinalCta({ isLoggedIn }: { isLoggedIn: boolean }) {
 
 function LandingFooter() {
   return (
-    <footer className="border-t border-border/60 py-10">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-muted-foreground sm:flex-row">
+    <footer
+      style={{
+        backgroundColor: "#010402",
+        borderColor: "rgba(34, 197, 94, 0.15)",
+      }}
+      className="border-t py-8 text-xs text-[#6e9981] font-mono"
+    >
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
         <BrandMark size="sm" />
-        <span>&copy; 2025 Monolith &middot; Notes that answer back.</span>
+        <span>Monolith &middot; Notes that answer back.</span>
       </div>
     </footer>
   );
